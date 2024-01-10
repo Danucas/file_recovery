@@ -3,22 +3,22 @@
 Restore deleted files from your disks
 
 ### Requirements
-- Python
-- Pip
+- Git [Install](https://www.git-scm.com/downloads)
+- Python [Downloads](https://www.python.org/downloads/)
+- Pip It comes with Python
 - Windows OS
 
 Clone the repo and install dependencies
 
-```bash
+Use the PowerShell
+
+```powershell
 pip install -r requirements.txt
 ```
 
-Run the application
+Run the application as administrator
 
-```bash
-
+```powershell
 start-process -filepath python -verb runas -argumentlist app.py
-
-python app.py
 ```
-Open the [webapp](127.0.0.1:5000)
+Open the [File Recovery WebApp](http://127.0.0.1:5000)
