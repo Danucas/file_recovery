@@ -83,6 +83,10 @@ def save_temp_scan(disk, data):
 def recover_all(file_format, addresses, disk):
     init_time = time.time()
     save_status({'recovering': True})
+
+    if not os.path.exists('recovered'):
+        os.mkdir('recovered')
+
     print(f'Recovering all {file_format} files in {disk}')
 
     errors = []
