@@ -247,15 +247,17 @@
             filesContainer.className = 'files-list';
     
             container.appendChild(filesContainer);
-    
-            let files = status[format].slice(0, 100).forEach((file)=> {
-                let item = document.createElement('li');
-                item.innerHTML = `<img /><p>recovered_${file}${format}</p><img onclick="recoverFile('${format}', '${file}')" class="icon-recover"/>`;
-                // item.addEventListener('click', ()=>{
-                //     recoverFile(format, file)
-                // })
-                filesContainer.appendChild(item);
-            });
+
+            if (status[format]) {
+                let files = status[format].slice(0, 100).forEach((file)=> {
+                    let item = document.createElement('li');
+                    item.innerHTML = `<img /><p>recovered_${file}${format}</p><img onclick="recoverFile('${format}', '${file}')" class="icon-recover"/>`;
+                    // item.addEventListener('click', ()=>{
+                    //     recoverFile(format, file)
+                    // })
+                    filesContainer.appendChild(item);
+                });
+            }
 
             let button = document.createElement('button');
             button.innerHTML = `Recover all ${format} files`;
