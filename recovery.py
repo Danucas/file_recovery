@@ -51,8 +51,11 @@ def save_status(data):
 
 
 def get_status():
-    with open('status.json', 'r') as status_file:
-        return json.loads(status_file.read())
+    if os.path.exists('status.json'):
+        with open('status.json', 'r') as status_file:
+            return json.loads(status_file.read())
+    else:
+        return {}
 
 
 def get_percent(address, total):
