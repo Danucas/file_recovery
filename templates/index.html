@@ -1,0 +1,333 @@
+<html>
+<head>
+    <title>Flask Tutorial</title>
+    
+</head>
+<body>
+    <style>
+
+        body {
+            font-family: sans-serif;
+        }
+
+        button {
+            margin: 4px 6px;
+            background-color: rgb(121, 121, 247);
+            border-radius: 8px;
+            border: none;
+            padding: 8px 12px;
+            color: white;
+            cursor: pointer;
+        }
+
+        select {
+            cursor: pointer;
+            padding: 8px 12px;
+            margin: 0px 24px;
+        }
+
+        .head-container {
+            display: grid;
+            grid-template-columns: 30vw 30vw;
+        }
+
+        .head-container h1 {
+            font-size: 20px;
+            padding-left: 16px;
+        }
+
+        .head-container p {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        label {
+            display: block;
+            width: max-content;
+            padding: 0px 16px;
+        }
+
+        .container {
+            width: 100vw;
+            display: grid;
+            grid-template-columns: 150px 300px;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            padding-top: 24px;
+        }
+        .file-formats {
+            padding: 0;
+            margin: 0;
+            margin-top: 24px;
+            box-sizing: border-box;
+        }
+
+        .file-formats li {
+            cursor: pointer;
+            padding: 12px 24px;
+            border: 2px solid rgb(239, 239, 239);
+            list-style: none;
+            margin-top: -2px;
+        }
+
+        .file-formats li:hover {
+            background-color: rgb(210, 210, 210);
+            
+        }
+
+        .files-container {
+            margin: 0;
+            padding: 0;
+        }
+
+        .files-list {
+            margin: 0;
+            overflow-y: scroll;
+            max-height: 60vh;
+            box-sizing: border-box;
+            padding: 2px 0px;
+        }
+
+        .files-list li {
+            border: 1px solid rgb(199, 199, 199);
+            cursor: pointer;
+            list-style: none;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-top:  -1px;
+            align-items: center;
+            display: grid;
+            grid-template-columns: 24px calc(100% - 80px) 20px;
+        }
+
+        .files-list input {
+            cursor: pointer;
+        }
+
+
+        .files-list li:hover {
+            background-color: rgb(243, 243, 243);
+            
+        }
+
+        .icon-recover {
+            width: 16px;
+            height: 16px;
+            background-color: rebeccapurple;
+            mask-position: center;
+            mask-size: contain;
+            -webkit-mask-image: url({{ url_for('static', filename='download.svg') }});
+            mask-image: url({{ url_for('static', filename='download.svg') }});
+            
+        }
+
+        .icon-recover:hover {
+            background-color: blue;
+        }
+
+    </style>
+    <script>
+        let drive = "{{ drives[0] }}";
+        let status = {{ status|tojson }};
+        console.log(drive);
+
+        console.log(status);
+
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function saveDrive() {
+            localStorage.setItem('drive', drive);
+        }
+
+        function readDrive() {
+            return localStorage.getItem('drive') || drive;
+        }
+
+        
+
+        async function healthCheck(metric) {
+            await sleep(1000);
+            let req = await fetch(`/status?disk=${drive.replace(':', '')}&health=true`);
+            if (req.status == 200) {
+                let state = (await req.json()).state;
+                console.log(state);
+                updateState(state);
+                if (state[metric]) {
+                    healthCheck(metric);
+                }
+            }
+        }
+
+        async function updateDrive() {
+            let input = document.getElementById('drive-input');
+            drive = input.value;
+            saveDrive();
+            updateStatus();
+        }
+
+        async function updateStatus() {
+            let req = await fetch(`/status?disk=${drive.replace(':', '')}`);
+            if (req.status == 200) {
+                let data = (await req.json());
+                status = data.data;
+                console.log(status);
+                drawFileFormats();
+                if (data.state.running) {
+                    healthCheck('running');
+                }
+
+                if (data.state.recovering) {
+                    healthCheck('recovering');
+                }
+                updateState(data.state);
+            }
+        }
+    
+        async function fastScan() {
+            let req = await fetch(`/start?disk=${drive.replace(':', '')}`);
+            if (req.status == 200) {
+                console.log('Scanner started');
+                healthCheck();
+            }
+        }
+    
+        async function refreshLoop() {
+            let req = await fetch('/status');
+            if (req.status == 200) {
+                console.log('Status');
+            }
+        }
+    
+        async function stopScan() {
+            let req = await fetch('/stop');
+            if (req.status == 200) {
+                console.log('Scanner stopped');
+            }
+        }
+    
+        async function recoverFile(format, address) {
+            let req = await fetch(`/recover?format=${format}&address=${address}&disk=${drive.replace(':', '')}`);
+            if (req.status == 200) {
+                console.log('File recovered...');
+            }
+        }
+
+        async function recoverByFormat(format) {
+            let req = await fetch(`/recover_all?format=${format}&disk=${drive.replace(':', '')}`);
+            if (req.status == 200) {
+                console.log('Files recovered...');
+            }
+        }
+
+        async function drawFileFormats() {
+            let formatsContainer = document.getElementById('file-formats');
+            formatsContainer.innerHTML = '';
+
+            Object.entries(status).forEach(([format, files]) => {
+                let cont = document.createElement('li');
+                cont.innerHTML = `${format} (${files.length})`;
+                cont.addEventListener('click', ()=>{
+                    drawContent(format);
+                });
+                formatsContainer.appendChild(cont);
+            });
+
+        }
+    
+        function drawContent(format) {
+            let container = document.getElementById('files-container');
+            container.innerHTML = '';
+            console.log(status[format]);
+    
+            let filesContainer = document.createElement('ul');
+            filesContainer.className = 'files-list';
+    
+            container.appendChild(filesContainer);
+    
+            let files = status[format].slice(0, 100).forEach((file)=> {
+                let item = document.createElement('li');
+                item.innerHTML = `<img /><p>recovered_${file}${format}</p><img onclick="recoverFile('${format}', '${file}')" class="icon-recover"/>`;
+                // item.addEventListener('click', ()=>{
+                //     recoverFile(format, file)
+                // })
+                filesContainer.appendChild(item);
+            });
+
+            let button = document.createElement('button');
+            button.innerHTML = `Recover all ${format} files`;
+            button.addEventListener('click', ()=> {
+                recoverByFormat(format);
+            })
+            container.appendChild(button);
+        }
+
+        window.onload = ()=> {
+            drive = readDrive();
+            let input = document.getElementById('drive-input');
+            input.value = drive;
+            updateStatus();
+        }
+
+        function updateState(state) {
+            console.log(state);
+            let elapsed = document.getElementById('elapsed-time');
+            let percent = document.getElementById('progress-percent');
+            let scannerState = document.getElementById('scanner-state');
+            let scanBtn = document.getElementById('scan-btn');
+            let stopBtn = document.getElementById('stop-btn');
+            
+            elapsed.innerHTML = `Elapsed time: ${Math.round(state.elapsed)} seconds`;
+            percent.innerHTML = `Progress: ${state.percent} %`;
+            scannerState.innerHTML = state.running ? 'In Progress...' : 'Stopped'
+
+            scanBtn.style.display = state.running ? 'none': 'block';
+            scanBtn.style.backgroundColor = "green";
+
+            stopBtn.style.display = state.running ? 'block': 'none';
+            stopBtn.style.backgroundColor = 'red';
+        }
+
+    </script>
+<div class="head-container">
+    <div>
+        <h1>File Recovery</h1>
+        <div style="display: flex; align-items: center;">
+            <label>Select Drive</label>
+            <select onchange="updateDrive()" id="drive-input">
+                {% for drive in drives %}
+                <option value="{{ drive }}">{{ drive }}</option>
+                {% endfor %}
+            </select>
+            <button id="scan-btn" onclick="fastScan()">Scan Drive</button>
+            <button id="stop-btn" onclick="stopScan()">Stop Scan</button>
+        </div>
+    </div>
+    <div>
+
+        <br/>
+        <br/>
+        <p id="scanner-state"></p>
+        <p id="elapsed-time"></p>
+        <p id="progress-percent"></p>
+    </div>
+</div>
+
+
+<div class="container">
+    <div>
+        <ul class="file-formats" id="file-formats">
+            {% for key, value in status.items() %}
+                <li onclick="drawContent('{{key}}')">{{ key }} {{ value|length }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div id="files-container" class="files-container">
+    </div>
+</div>
+
+</body>
+</html>
