@@ -44,7 +44,7 @@ def status():
     disk = request.args.get('disk').replace(':', '')
     status_json = read_temp_scan(disk)
     for format in status_json.keys():
-        status_json[format] = len(status_json[format])
+        status_json[format] = status_json[format]
     state = get_status()
 
     return jsonify(data=status_json, state=state)
